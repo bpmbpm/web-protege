@@ -1,0 +1,2583 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WebProtege Аналог</title>
+
+  <!-- Библиотека Graphviz для отрисовки графов в формате DOT -->
+  <script src="https://unpkg.com/@viz-js/viz@3.4.0/lib/viz-standalone.js"></script>
+
+  <style>
+    /* ===== ОБЩИЕ СТИЛИ ===== */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Arial, sans-serif;
+      font-size: 13px;
+      background: #f0f2f5;
+      color: #333;
+    }
+
+    /* ===== ШАПКА СТРАНИЦЫ ===== */
+    .app-header {
+      background: #2c3e50;
+      color: white;
+      padding: 8px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .app-header h1 {
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    .app-header .header-buttons {
+      display: flex;
+      gap: 8px;
+    }
+
+    /* ===== КНОПКИ ===== */
+    button {
+      padding: 4px 10px;
+      border: 1px solid #aaa;
+      border-radius: 3px;
+      cursor: pointer;
+      font-size: 12px;
+      background: #ecf0f1;
+    }
+
+    button:hover { background: #d5dbdb; }
+
+    .btn-primary {
+      background: #2980b9;
+      color: white;
+      border-color: #1a6693;
+    }
+
+    .btn-primary:hover { background: #1a6693; }
+
+    .btn-danger {
+      background: #e74c3c;
+      color: white;
+      border-color: #c0392b;
+    }
+
+    .btn-danger:hover { background: #c0392b; }
+
+    .btn-small {
+      padding: 2px 6px;
+      font-size: 11px;
+    }
+
+    /* ===== ОСНОВНОЙ МАКЕТ (3 колонки) ===== */
+    .main-layout {
+      display: flex;
+      height: calc(100vh - 40px);
+      overflow: hidden;
+    }
+
+    /* ===== ЛЕВАЯ ПАНЕЛЬ — НАВИГАТОР ===== */
+    .left-panel {
+      width: 240px;
+      min-width: 180px;
+      background: white;
+      border-right: 1px solid #ccc;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Вкладки навигатора */
+    .nav-tabs {
+      display: flex;
+      border-bottom: 2px solid #2980b9;
+      flex-shrink: 0;
+    }
+
+    .nav-tab {
+      flex: 1;
+      padding: 6px 4px;
+      text-align: center;
+      cursor: pointer;
+      font-size: 11px;
+      border: none;
+      border-radius: 0;
+      background: #ecf0f1;
+      color: #555;
+    }
+
+    .nav-tab.active {
+      background: #2980b9;
+      color: white;
+    }
+
+    .nav-tab:hover:not(.active) { background: #d5dbdb; }
+
+    /* Содержимое вкладок навигатора */
+    .nav-content {
+      display: none;
+      flex: 1;
+      overflow-y: auto;
+      padding: 4px;
+    }
+
+    .nav-content.active { display: block; }
+
+    /* ===== ДЕРЕВО КЛАССОВ/СВОЙСТВ/ИНДИВИДОВ ===== */
+    .tree-toolbar {
+      display: flex;
+      gap: 4px;
+      padding: 4px;
+      border-bottom: 1px solid #ddd;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+
+    .tree-list {
+      list-style: none;
+      padding: 0;
+    }
+
+    .tree-item {
+      padding: 0;
+    }
+
+    /* Строка узла дерева */
+    .tree-row {
+      display: flex;
+      align-items: center;
+      padding: 3px 4px;
+      cursor: pointer;
+      border-radius: 2px;
+      user-select: none;
+    }
+
+    .tree-row:hover { background: #e8f4fd; }
+    .tree-row.selected { background: #d6eaf8; font-weight: bold; }
+
+    /* Иконка раскрытия/скрытия подузлов */
+    .tree-toggle {
+      width: 14px;
+      font-size: 9px;
+      color: #888;
+      cursor: pointer;
+      flex-shrink: 0;
+      text-align: center;
+    }
+
+    .tree-icon {
+      margin-right: 4px;
+      font-size: 12px;
+    }
+
+    .tree-label { flex: 1; }
+
+    /* Подузлы дерева */
+    .tree-children {
+      list-style: none;
+      padding-left: 16px;
+    }
+
+    .tree-children.collapsed { display: none; }
+
+    /* ===== ЦЕНТРАЛЬНАЯ ПАНЕЛЬ — ДЕТАЛИ И ГРАФ ===== */
+    .center-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: white;
+      border-right: 1px solid #ccc;
+    }
+
+    /* Заголовок панели деталей */
+    .detail-header {
+      background: #34495e;
+      color: white;
+      padding: 6px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-shrink: 0;
+    }
+
+    .detail-header-title { font-size: 14px; font-weight: bold; }
+
+    /* Вкладки деталей */
+    .detail-tabs {
+      display: flex;
+      border-bottom: 1px solid #ddd;
+      background: #f9f9f9;
+      flex-shrink: 0;
+    }
+
+    .detail-tab {
+      padding: 6px 14px;
+      cursor: pointer;
+      font-size: 12px;
+      border: none;
+      border-bottom: 2px solid transparent;
+      background: transparent;
+      color: #555;
+    }
+
+    .detail-tab.active {
+      border-bottom-color: #2980b9;
+      color: #2980b9;
+      font-weight: bold;
+    }
+
+    .detail-tab:hover:not(.active) { background: #eee; }
+
+    /* Содержимое вкладок деталей */
+    .detail-content {
+      display: none;
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+    }
+
+    .detail-content.active { display: block; }
+
+    /* ===== ПАНЕЛЬ ГРАФА ===== */
+    .graph-panel {
+      flex: 1;
+      overflow: auto;
+      background: #fafafa;
+      border-top: 1px solid #ddd;
+      position: relative;
+      min-height: 200px;
+    }
+
+    #graphvizContainer {
+      padding: 12px;
+    }
+
+    #graphvizContainer svg {
+      max-width: 100%;
+    }
+
+    /* ===== ПРАВАЯ ПАНЕЛЬ — АННОТАЦИИ/ОПЕРАЦИИ ===== */
+    .right-panel {
+      width: 240px;
+      min-width: 180px;
+      background: white;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .right-panel-header {
+      background: #7f8c8d;
+      color: white;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+
+    .right-panel-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    /* ===== СТРОКИ АННОТАЦИЙ И СВОЙСТВ ===== */
+    .prop-row {
+      display: flex;
+      align-items: flex-start;
+      margin-bottom: 8px;
+      gap: 4px;
+    }
+
+    .prop-label {
+      font-size: 11px;
+      color: #777;
+      min-width: 80px;
+      padding-top: 4px;
+    }
+
+    .prop-value {
+      flex: 1;
+      font-size: 12px;
+    }
+
+    .prop-value input, .prop-value select, .prop-value textarea {
+      width: 100%;
+      padding: 3px 5px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      font-size: 12px;
+    }
+
+    .prop-value textarea { min-height: 50px; resize: vertical; }
+
+    /* ===== СВОРАЧИВАЕМЫЕ ПАНЕЛИ (DOT и лог) ===== */
+    .collapsible-panel {
+      border: 1px solid #ccc;
+      margin: 4px;
+      border-radius: 3px;
+      background: white;
+    }
+
+    /* Заголовок сворачиваемой панели — нажать для раскрытия/скрытия */
+    .collapsible-header {
+      background: #ecf0f1;
+      padding: 6px 10px;
+      cursor: pointer;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+      font-size: 12px;
+      font-weight: bold;
+    }
+
+    .collapsible-header:hover { background: #d5dbdb; }
+
+    .collapsible-icon { font-size: 10px; color: #888; }
+
+    /* Содержимое сворачиваемой панели — скрыто по умолчанию */
+    .collapsible-content { display: none; padding: 8px; }
+    .collapsible-content.open { display: block; }
+
+    /* DOT-код */
+    #dotOutput {
+      width: 100%;
+      min-height: 120px;
+      font-family: monospace;
+      font-size: 11px;
+      border: 1px solid #ccc;
+      padding: 4px;
+      resize: vertical;
+      background: #fafafa;
+    }
+
+    /* Лог событий */
+    #eventLog {
+      width: 100%;
+      min-height: 60px;
+      font-family: monospace;
+      font-size: 11px;
+      border: 1px solid #ccc;
+      padding: 4px;
+      resize: vertical;
+      background: #fafafa;
+      color: #333;
+    }
+
+    /* ===== НИЖНЯЯ ПАНЕЛЬ С DOT и ЛОГОМ ===== */
+    .bottom-panels {
+      border-top: 2px solid #ccc;
+      background: #f5f5f5;
+      flex-shrink: 0;
+    }
+
+    /* ===== УВЕДОМЛЕНИЯ ===== */
+    .notification {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #2ecc71;
+      color: white;
+      padding: 8px 14px;
+      border-radius: 4px;
+      font-size: 12px;
+      z-index: 9999;
+      display: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    /* ===== ДИАЛОГОВОЕ ОКНО ===== */
+    .dialog-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .dialog-overlay.open { display: flex; }
+
+    .dialog-box {
+      background: white;
+      border-radius: 6px;
+      padding: 20px;
+      min-width: 300px;
+      max-width: 500px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+
+    .dialog-title {
+      font-size: 14px;
+      font-weight: bold;
+      margin-bottom: 12px;
+      color: #2c3e50;
+    }
+
+    .dialog-body { margin-bottom: 16px; }
+
+    .dialog-body label {
+      display: block;
+      font-size: 12px;
+      margin-bottom: 4px;
+      color: #555;
+    }
+
+    .dialog-body input, .dialog-body select {
+      width: 100%;
+      padding: 5px 8px;
+      border: 1px solid #ccc;
+      border-radius: 3px;
+      font-size: 13px;
+      margin-bottom: 10px;
+    }
+
+    .dialog-buttons { display: flex; gap: 8px; justify-content: flex-end; }
+
+    /* ===== СТИЛЬ ИМПОРТ/ЭКСПОРТ ФАЙЛОВ ===== */
+    .import-area {
+      border: 2px dashed #aaa;
+      border-radius: 4px;
+      padding: 12px;
+      text-align: center;
+      color: #888;
+      cursor: pointer;
+      margin-bottom: 8px;
+      font-size: 12px;
+    }
+
+    .import-area:hover { border-color: #2980b9; color: #2980b9; }
+
+    /* ===== ТЕГИ КЛАССОВ/СВОЙСТВ В РЕДАКТОРЕ ===== */
+    .tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      margin-top: 4px;
+    }
+
+    .tag {
+      background: #d6eaf8;
+      border: 1px solid #aed6f1;
+      border-radius: 10px;
+      padding: 1px 8px;
+      font-size: 11px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .tag:hover { background: #aed6f1; }
+
+    .tag-remove {
+      color: #888;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .tag-remove:hover { color: #e74c3c; }
+
+    /* ===== ПУСТОЕ СОСТОЯНИЕ ===== */
+    .empty-state {
+      color: #aaa;
+      font-style: italic;
+      font-size: 12px;
+      padding: 8px 0;
+    }
+
+    /* ===== РАЗДЕЛИТЕЛЬ ===== */
+    hr.section-sep {
+      border: none;
+      border-top: 1px solid #eee;
+      margin: 8px 0;
+    }
+
+    /* ===== ВЫДЕЛЕНИЕ УЗЛОВ ГРАФА ===== */
+    #graphvizContainer .node polygon,
+    #graphvizContainer .node ellipse,
+    #graphvizContainer .node rect {
+      transition: stroke-width 0.1s;
+    }
+
+    #graphvizContainer .node:hover polygon,
+    #graphvizContainer .node:hover ellipse,
+    #graphvizContainer .node:hover rect {
+      stroke-width: 3;
+      stroke: #e67e22;
+    }
+
+    #graphvizContainer .node.selected polygon,
+    #graphvizContainer .node.selected ellipse,
+    #graphvizContainer .node.selected rect {
+      stroke-width: 4;
+      stroke: #e74c3c;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===== ШАПКА ===== -->
+<div class="app-header">
+  <h1>🦉 WebProtege Аналог — Редактор онтологий</h1>
+  <div class="header-buttons">
+    <button onclick="importJSON()" title="Загрузить онтологию из JSON-файла">📂 Открыть</button>
+    <button onclick="exportJSON()" title="Сохранить онтологию в JSON-файл">💾 Сохранить</button>
+    <button onclick="exportOWL()" title="Экспорт в формат OWL/Manchester">📤 OWL</button>
+    <button onclick="showImportDialog()" title="Импорт примеров">📋 Примеры</button>
+    <button class="btn-primary" onclick="renderGraph()" title="Обновить граф">🔄 Граф</button>
+  </div>
+</div>
+
+<!-- ===== ОСНОВНОЙ МАКЕТ ===== -->
+<div class="main-layout">
+
+  <!-- ===== ЛЕВАЯ ПАНЕЛЬ — НАВИГАТОР ===== -->
+  <div class="left-panel">
+    <!-- Вкладки: Классы, Свойства, Индивиды -->
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="switchNavTab('classes')" id="tab-classes">Классы</button>
+      <button class="nav-tab" onclick="switchNavTab('props')" id="tab-props">Свойства</button>
+      <button class="nav-tab" onclick="switchNavTab('indivs')" id="tab-indivs">Индивиды</button>
+    </div>
+
+    <!-- ===== ВКЛАДКА КЛАССОВ ===== -->
+    <div class="nav-content active" id="nav-classes">
+      <div class="tree-toolbar">
+        <button class="btn-small btn-primary" onclick="addClassDialog()" title="Добавить класс">+ Класс</button>
+        <button class="btn-small btn-danger" onclick="deleteSelected()" title="Удалить выбранное">✕</button>
+        <button class="btn-small" onclick="expandAll('classes-tree')" title="Развернуть всё">⊞</button>
+        <button class="btn-small" onclick="collapseAll('classes-tree')" title="Свернуть всё">⊟</button>
+      </div>
+      <!-- Дерево классов OWL — строится динамически в JS -->
+      <ul class="tree-list" id="classes-tree"></ul>
+    </div>
+
+    <!-- ===== ВКЛАДКА СВОЙСТВ ===== -->
+    <div class="nav-content" id="nav-props">
+      <div class="tree-toolbar">
+        <button class="btn-small btn-primary" onclick="addPropDialog('object')" title="Добавить объектное свойство">+ Объект.</button>
+        <button class="btn-small btn-primary" onclick="addPropDialog('data')" title="Добавить свойство данных">+ Данные</button>
+        <button class="btn-small btn-danger" onclick="deleteSelected()" title="Удалить выбранное">✕</button>
+      </div>
+      <div style="font-size:11px; color:#888; padding:4px 4px 2px;">Объектные свойства:</div>
+      <ul class="tree-list" id="objprops-tree"></ul>
+      <div style="font-size:11px; color:#888; padding:4px 4px 2px; margin-top:4px;">Свойства данных:</div>
+      <ul class="tree-list" id="dataprops-tree"></ul>
+    </div>
+
+    <!-- ===== ВКЛАДКА ИНДИВИДОВ ===== -->
+    <div class="nav-content" id="nav-indivs">
+      <div class="tree-toolbar">
+        <button class="btn-small btn-primary" onclick="addIndividualDialog()" title="Добавить индивид">+ Индивид</button>
+        <button class="btn-small btn-danger" onclick="deleteSelected()" title="Удалить выбранное">✕</button>
+      </div>
+      <!-- Список индивидов (не дерево, так как индивиды не имеют иерархии) -->
+      <ul class="tree-list" id="indivs-list"></ul>
+    </div>
+  </div>
+
+  <!-- ===== ЦЕНТРАЛЬНАЯ ПАНЕЛЬ — ДЕТАЛИ + ГРАФ ===== -->
+  <div class="center-panel">
+    <!-- Заголовок с именем выбранного элемента -->
+    <div class="detail-header">
+      <span class="detail-header-title" id="detail-title">Выберите элемент</span>
+      <div>
+        <button class="btn-small" onclick="renameSelected()" title="Переименовать">✏️ Переименовать</button>
+      </div>
+    </div>
+
+    <!-- Вкладки деталей: Описание, Использование, Аннотации -->
+    <div class="detail-tabs">
+      <button class="detail-tab active" onclick="switchDetailTab('desc')" id="dtab-desc">Описание</button>
+      <button class="detail-tab" onclick="switchDetailTab('usage')" id="dtab-usage">Использование</button>
+      <button class="detail-tab" onclick="switchDetailTab('annot')" id="dtab-annot">Аннотации</button>
+    </div>
+
+    <!-- ===== ВКЛАДКА ОПИСАНИЯ ===== -->
+    <div class="detail-content active" id="dcontent-desc">
+      <!-- Содержимое вкладки описания строится динамически -->
+      <div id="desc-panel-content">
+        <p class="empty-state">Выберите элемент в навигаторе слева.</p>
+      </div>
+    </div>
+
+    <!-- ===== ВКЛАДКА ИСПОЛЬЗОВАНИЯ ===== -->
+    <div class="detail-content" id="dcontent-usage">
+      <div id="usage-panel-content">
+        <p class="empty-state">Выберите элемент.</p>
+      </div>
+    </div>
+
+    <!-- ===== ВКЛАДКА АННОТАЦИЙ ===== -->
+    <div class="detail-content" id="dcontent-annot">
+      <div id="annot-panel-content">
+        <div class="prop-row">
+          <span class="prop-label">rdfs:label</span>
+          <div class="prop-value">
+            <input type="text" id="annot-label" placeholder="Метка на русском" onchange="saveAnnotation('label')">
+          </div>
+        </div>
+        <div class="prop-row">
+          <span class="prop-label">rdfs:comment</span>
+          <div class="prop-value">
+            <textarea id="annot-comment" placeholder="Комментарий" onchange="saveAnnotation('comment')"></textarea>
+          </div>
+        </div>
+        <p class="empty-state" id="annot-empty">Выберите элемент.</p>
+      </div>
+    </div>
+
+    <!-- ===== ПАНЕЛЬ ГРАФА ===== -->
+    <div class="graph-panel">
+      <div id="graphvizContainer">
+        <p style="color:#aaa; font-style:italic; font-size:12px; padding:12px;">
+          Нажмите кнопку <strong>🔄 Граф</strong> для отображения графа онтологии.
+        </p>
+      </div>
+    </div>
+
+    <!-- ===== НИЖНЯЯ ПАНЕЛЬ: DOT-КОД И ЛОГ ===== -->
+    <div class="bottom-panels">
+      <!-- Сворачиваемая панель с DOT-кодом -->
+      <div class="collapsible-panel">
+        <div class="collapsible-header" onclick="toggleCollapsible('dot-panel')">
+          <span>📄 DOT-код (данные для Graphviz)</span>
+          <span class="collapsible-icon" id="dot-panel-icon">▶</span>
+        </div>
+        <div class="collapsible-content" id="dot-panel">
+          <textarea id="dotOutput" readonly placeholder="DOT-код появится после нажатия кнопки Граф"></textarea>
+          <div style="display:flex; gap:6px; margin-top:4px;">
+            <button class="btn-small" onclick="copyDot()" title="Скопировать DOT-код">📋 Копировать</button>
+            <button class="btn-small btn-primary" onclick="renderFromDot()" title="Применить DOT-код из поля выше">▶ Применить</button>
+            <a id="graphviz-online-link" href="#" target="_blank" class="btn-small" onclick="openGraphvizOnline(event)" style="text-decoration:none; display:inline-block;">🌐 Graphviz Online</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Сворачиваемая панель лога событий -->
+      <div class="collapsible-panel">
+        <div class="collapsible-header" onclick="toggleCollapsible('log-panel')">
+          <span>📋 Лог событий</span>
+          <span class="collapsible-icon" id="log-panel-icon">▶</span>
+        </div>
+        <div class="collapsible-content" id="log-panel">
+          <textarea id="eventLog" readonly placeholder="Здесь будут отображаться события..."></textarea>
+          <button class="btn-small" onclick="clearLog()" style="margin-top:4px;">🗑️ Очистить лог</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== ПРАВАЯ ПАНЕЛЬ — БЫСТРЫЕ ДЕЙСТВИЯ И ИНФОРМАЦИЯ ===== -->
+  <div class="right-panel">
+    <div class="right-panel-header">⚡ Быстрые действия</div>
+    <div class="right-panel-content">
+      <!-- Информация о текущей онтологии -->
+      <div style="font-size:11px; font-weight:bold; margin-bottom:6px; color:#555;">ИРИ онтологии:</div>
+      <input type="text" id="ontology-iri" value="http://example.org/ontology"
+             style="width:100%; font-size:11px; padding:3px; border:1px solid #ccc; border-radius:2px; margin-bottom:8px;"
+             onchange="saveOntologyIRI()">
+
+      <hr class="section-sep">
+      <div style="font-size:11px; font-weight:bold; margin-bottom:6px; color:#555;">Настройки графа:</div>
+
+      <!-- Тип отображаемых элементов на графе -->
+      <div class="prop-row">
+        <span class="prop-label" style="font-size:11px;">Показать:</span>
+        <div class="prop-value">
+          <label style="display:block; font-size:11px;"><input type="checkbox" id="show-classes" checked onchange="renderGraph()"> Классы</label>
+          <label style="display:block; font-size:11px;"><input type="checkbox" id="show-objprops" checked onchange="renderGraph()"> Объект. свойства</label>
+          <label style="display:block; font-size:11px;"><input type="checkbox" id="show-dataprops" checked onchange="renderGraph()"> Свойства данных</label>
+          <label style="display:block; font-size:11px;"><input type="checkbox" id="show-indivs" checked onchange="renderGraph()"> Индивиды</label>
+        </div>
+      </div>
+
+      <hr class="section-sep">
+      <div style="font-size:11px; font-weight:bold; margin-bottom:6px; color:#555;">Цвета узлов:</div>
+      <div class="prop-row">
+        <span class="prop-label" style="font-size:11px;">Классы:</span>
+        <div class="prop-value">
+          <input type="color" id="color-class" value="#cfe2f3" onchange="renderGraph()" style="width:100%; height:24px; padding:0; border:1px solid #ccc;">
+        </div>
+      </div>
+      <div class="prop-row">
+        <span class="prop-label" style="font-size:11px;">Индивиды:</span>
+        <div class="prop-value">
+          <input type="color" id="color-indiv" value="#d5e8d4" onchange="renderGraph()" style="width:100%; height:24px; padding:0; border:1px solid #ccc;">
+        </div>
+      </div>
+
+      <hr class="section-sep">
+      <div style="font-size:11px; font-weight:bold; margin-bottom:6px; color:#555;">Статистика:</div>
+      <div id="stats" style="font-size:11px; color:#555; line-height:1.7;">
+        Загрузка...
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main-layout -->
+
+<!-- ===== ДИАЛОГ ДОБАВЛЕНИЯ КЛАССА ===== -->
+<div class="dialog-overlay" id="dialog-class">
+  <div class="dialog-box">
+    <div class="dialog-title">Добавить класс</div>
+    <div class="dialog-body">
+      <label>Имя класса (IRI-локальная часть):</label>
+      <input type="text" id="new-class-name" placeholder="Например: Animal" onkeydown="if(event.key==='Enter') confirmAddClass()">
+      <label>Родительский класс:</label>
+      <select id="new-class-parent">
+        <option value="">— нет (корневой класс) —</option>
+      </select>
+    </div>
+    <div class="dialog-buttons">
+      <button onclick="closeDialog('dialog-class')">Отмена</button>
+      <button class="btn-primary" onclick="confirmAddClass()">Добавить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ДИАЛОГ ДОБАВЛЕНИЯ СВОЙСТВА ===== -->
+<div class="dialog-overlay" id="dialog-prop">
+  <div class="dialog-box">
+    <div class="dialog-title" id="dialog-prop-title">Добавить свойство</div>
+    <div class="dialog-body">
+      <label>Имя свойства (IRI-локальная часть):</label>
+      <input type="text" id="new-prop-name" placeholder="Например: hasParent" onkeydown="if(event.key==='Enter') confirmAddProp()">
+      <label>Родительское свойство:</label>
+      <select id="new-prop-parent">
+        <option value="">— нет (корневое свойство) —</option>
+      </select>
+    </div>
+    <div class="dialog-buttons">
+      <button onclick="closeDialog('dialog-prop')">Отмена</button>
+      <button class="btn-primary" onclick="confirmAddProp()">Добавить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ДИАЛОГ ДОБАВЛЕНИЯ ИНДИВИДА ===== -->
+<div class="dialog-overlay" id="dialog-indiv">
+  <div class="dialog-box">
+    <div class="dialog-title">Добавить индивид</div>
+    <div class="dialog-body">
+      <label>Имя индивида:</label>
+      <input type="text" id="new-indiv-name" placeholder="Например: Fido" onkeydown="if(event.key==='Enter') confirmAddIndividual()">
+      <label>Тип (класс):</label>
+      <select id="new-indiv-class">
+        <option value="">— не указан —</option>
+      </select>
+    </div>
+    <div class="dialog-buttons">
+      <button onclick="closeDialog('dialog-indiv')">Отмена</button>
+      <button class="btn-primary" onclick="confirmAddIndividual()">Добавить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ДИАЛОГ ПРИМЕРОВ ОНТОЛОГИЙ ===== -->
+<div class="dialog-overlay" id="dialog-examples">
+  <div class="dialog-box">
+    <div class="dialog-title">Загрузить пример онтологии</div>
+    <div class="dialog-body">
+      <label>Выберите пример:</label>
+      <select id="example-select">
+        <option value="animals">Животные (Animals)</option>
+        <option value="pizza">Пицца (Pizza)</option>
+        <option value="family">Семья (Family)</option>
+      </select>
+    </div>
+    <div class="dialog-buttons">
+      <button onclick="closeDialog('dialog-examples')">Отмена</button>
+      <button class="btn-primary" onclick="loadExample()">Загрузить</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ДИАЛОГ ПЕРЕИМЕНОВАНИЯ ===== -->
+<div class="dialog-overlay" id="dialog-rename">
+  <div class="dialog-box">
+    <div class="dialog-title">Переименовать</div>
+    <div class="dialog-body">
+      <label>Новое имя:</label>
+      <input type="text" id="rename-input" placeholder="Новое имя" onkeydown="if(event.key==='Enter') confirmRename()">
+    </div>
+    <div class="dialog-buttons">
+      <button onclick="closeDialog('dialog-rename')">Отмена</button>
+      <button class="btn-primary" onclick="confirmRename()">Переименовать</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ДИАЛОГ ДОБАВЛЕНИЯ СВЯЗИ (ASSERT) ===== -->
+<div class="dialog-overlay" id="dialog-assert">
+  <div class="dialog-box">
+    <div class="dialog-title" id="dialog-assert-title">Добавить утверждение</div>
+    <div class="dialog-body" id="dialog-assert-body">
+    </div>
+    <div class="dialog-buttons">
+      <button onclick="closeDialog('dialog-assert')">Отмена</button>
+      <button class="btn-primary" id="dialog-assert-ok" onclick="">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== УВЕДОМЛЕНИЕ ===== -->
+<div class="notification" id="notification"></div>
+
+<!-- ===== СКРЫТЫЙ INPUT ДЛЯ ИМПОРТА ФАЙЛОВ ===== -->
+<input type="file" id="fileInput" accept=".json" style="display:none" onchange="handleFileImport(event)">
+
+<!-- ===== ОСНОВНОЙ JAVASCRIPT ===== -->
+<script>
+// ============================================================
+// МОДЕЛЬ ДАННЫХ ОНТОЛОГИИ
+// ============================================================
+
+// Онтология хранится в одном объекте ontology
+// Каждый класс, свойство и индивид имеет уникальный id
+var ontology = {
+  iri: "http://example.org/ontology",     // ИРИ онтологии
+
+  // Классы: массив объектов {id, name, parent, annotations}
+  classes: [],
+
+  // Объектные свойства: {id, name, parent, domain, range, annotations}
+  objectProperties: [],
+
+  // Свойства данных: {id, name, parent, domain, range, annotations}
+  dataProperties: [],
+
+  // Индивиды: {id, name, type (класс), annotations, assertions}
+  individuals: [],
+
+  // Аксиомы о классах (диаграммы) хранятся в классах напрямую:
+  // class.subClassOf — массив id родительских классов
+  // class.equivalentTo — массив выражений
+  // class.disjointWith — массив id классов
+};
+
+// Выбранный в навигаторе элемент
+var selectedItem = null;  // {kind: 'class'|'objprop'|'dataprop'|'individual', id}
+
+// Счётчик для генерации уникальных id
+var idCounter = 1;
+
+// Тип текущего диалога свойства ('object' или 'data')
+var currentPropType = 'object';
+
+// ============================================================
+// УТИЛИТЫ
+// ============================================================
+
+// Генерация уникального id
+function newId() {
+  return 'id_' + (idCounter++);
+}
+
+// Получить класс по id
+function getClass(id) {
+  return ontology.classes.find(function(c) { return c.id === id; });
+}
+
+// Получить объектное свойство по id
+function getObjProp(id) {
+  return ontology.objectProperties.find(function(p) { return p.id === id; });
+}
+
+// Получить свойство данных по id
+function getDataProp(id) {
+  return ontology.dataProperties.find(function(p) { return p.id === id; });
+}
+
+// Получить индивид по id
+function getIndividual(id) {
+  return ontology.individuals.find(function(i) { return i.id === id; });
+}
+
+// Получить любой элемент по {kind, id}
+function getItem(ref) {
+  if (!ref) return null;
+  if (ref.kind === 'class') return getClass(ref.id);
+  if (ref.kind === 'objprop') return getObjProp(ref.id);
+  if (ref.kind === 'dataprop') return getDataProp(ref.id);
+  if (ref.kind === 'individual') return getIndividual(ref.id);
+  return null;
+}
+
+// Показать уведомление пользователю
+function showNotification(msg) {
+  var el = document.getElementById('notification');
+  el.textContent = msg;
+  el.style.display = 'block';
+  // Скрыть через 2 секунды
+  setTimeout(function() { el.style.display = 'none'; }, 2000);
+}
+
+// Добавить строку в лог событий
+function logEvent(msg) {
+  var log = document.getElementById('eventLog');
+  var time = new Date().toLocaleTimeString('ru');
+  log.value += '[' + time + '] ' + msg + '\n';
+  // Прокрутить в конец
+  log.scrollTop = log.scrollHeight;
+}
+
+// Очистить лог
+function clearLog() {
+  document.getElementById('eventLog').value = '';
+}
+
+// Сохранить ИРИ онтологии
+function saveOntologyIRI() {
+  ontology.iri = document.getElementById('ontology-iri').value.trim();
+  logEvent('ИРИ онтологии изменён: ' + ontology.iri);
+}
+
+// ============================================================
+// ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК НАВИГАТОРА (КЛАССЫ / СВОЙСТВА / ИНДИВИДЫ)
+// ============================================================
+function switchNavTab(tab) {
+  // Скрыть все вкладки
+  document.querySelectorAll('.nav-content').forEach(function(el) {
+    el.classList.remove('active');
+  });
+  document.querySelectorAll('.nav-tab').forEach(function(el) {
+    el.classList.remove('active');
+  });
+
+  // Показать нужную вкладку
+  document.getElementById('nav-' + tab).classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+}
+
+// ============================================================
+// ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК ДЕТАЛЕЙ (ОПИСАНИЕ / ИСПОЛЬЗОВАНИЕ / АННОТАЦИИ)
+// ============================================================
+function switchDetailTab(tab) {
+  document.querySelectorAll('.detail-content').forEach(function(el) {
+    el.classList.remove('active');
+  });
+  document.querySelectorAll('.detail-tab').forEach(function(el) {
+    el.classList.remove('active');
+  });
+  document.getElementById('dcontent-' + tab).classList.add('active');
+  document.getElementById('dtab-' + tab).classList.add('active');
+}
+
+// ============================================================
+// СВОРАЧИВАЕМЫЕ ПАНЕЛИ (DOT-КОД, ЛОГ СОБЫТИЙ)
+// ============================================================
+
+// Переключить состояние сворачиваемой панели
+function toggleCollapsible(panelId) {
+  var content = document.getElementById(panelId);
+  var icon = document.getElementById(panelId + '-icon');
+
+  if (content.classList.contains('open')) {
+    // Закрыть панель
+    content.classList.remove('open');
+    icon.textContent = '▶';
+  } else {
+    // Открыть панель
+    content.classList.add('open');
+    icon.textContent = '▼';
+  }
+}
+
+// ============================================================
+// ДЕРЕВЬЯ НАВИГАТОРА (КЛАССЫ, СВОЙСТВА, ИНДИВИДЫ)
+// ============================================================
+
+// Перестроить все деревья навигатора
+function rebuildTrees() {
+  buildClassTree();
+  buildPropTrees();
+  buildIndivList();
+  updateStats();
+}
+
+// Построить дерево классов
+function buildClassTree() {
+  var ul = document.getElementById('classes-tree');
+  ul.innerHTML = '';
+
+  // Найти все корневые классы (без родителя)
+  var roots = ontology.classes.filter(function(c) { return !c.parent; });
+
+  // Если нет классов — показать подсказку
+  if (ontology.classes.length === 0) {
+    var li = document.createElement('li');
+    li.className = 'tree-item';
+    li.innerHTML = '<span class="empty-state">Нет классов. Нажмите «+ Класс».</span>';
+    ul.appendChild(li);
+    return;
+  }
+
+  // Добавить корень owl:Thing
+  var thingLi = document.createElement('li');
+  thingLi.className = 'tree-item';
+  var thingRow = document.createElement('div');
+  thingRow.className = 'tree-row';
+  thingRow.innerHTML = '<span class="tree-toggle">▼</span><span class="tree-icon">🔷</span><span class="tree-label"><em>owl:Thing</em></span>';
+  thingLi.appendChild(thingRow);
+
+  // Построить подузлы для корневых классов
+  var thingChildren = document.createElement('ul');
+  thingChildren.className = 'tree-children';
+  roots.forEach(function(cls) {
+    thingChildren.appendChild(buildClassNode(cls));
+  });
+  thingLi.appendChild(thingChildren);
+  ul.appendChild(thingLi);
+
+  // Обработчик для owl:Thing — разворачивание/сворачивание
+  thingRow.querySelector('.tree-toggle').addEventListener('click', function(e) {
+    e.stopPropagation();
+    toggleTreeNode(this, thingChildren);
+  });
+}
+
+// Построить узел дерева для одного класса
+function buildClassNode(cls) {
+  var li = document.createElement('li');
+  li.className = 'tree-item';
+  li.dataset.id = cls.id;
+  li.dataset.kind = 'class';
+
+  // Найти дочерние классы
+  var children = ontology.classes.filter(function(c) { return c.parent === cls.id; });
+
+  var row = document.createElement('div');
+  row.className = 'tree-row' + (selectedItem && selectedItem.id === cls.id ? ' selected' : '');
+  row.dataset.id = cls.id;
+  row.dataset.kind = 'class';
+
+  // Иконка разворачивания — только если есть дочерние элементы
+  var toggleIcon = children.length > 0 ? '▶' : '&nbsp;';
+  row.innerHTML = '<span class="tree-toggle">' + toggleIcon + '</span>' +
+                  '<span class="tree-icon">🔶</span>' +
+                  '<span class="tree-label">' + escapeHtml(cls.name) + '</span>';
+
+  // Обработчик выбора класса
+  row.addEventListener('click', function() {
+    selectItem('class', cls.id);
+  });
+
+  li.appendChild(row);
+
+  // Добавить дочерние классы (свёрнуты по умолчанию)
+  if (children.length > 0) {
+    var childUl = document.createElement('ul');
+    childUl.className = 'tree-children collapsed';
+
+    children.forEach(function(child) {
+      childUl.appendChild(buildClassNode(child));
+    });
+
+    li.appendChild(childUl);
+
+    // Обработчик разворачивания
+    row.querySelector('.tree-toggle').addEventListener('click', function(e) {
+      e.stopPropagation();
+      toggleTreeNode(this, childUl);
+    });
+  }
+
+  return li;
+}
+
+// Построить деревья свойств (объектных и данных)
+function buildPropTrees() {
+  // Объектные свойства
+  var objUl = document.getElementById('objprops-tree');
+  objUl.innerHTML = '';
+  if (ontology.objectProperties.length === 0) {
+    objUl.innerHTML = '<li><span class="empty-state">Нет свойств.</span></li>';
+  } else {
+    ontology.objectProperties.filter(function(p) { return !p.parent; }).forEach(function(p) {
+      objUl.appendChild(buildPropNode(p, 'objprop', ontology.objectProperties));
+    });
+  }
+
+  // Свойства данных
+  var dataUl = document.getElementById('dataprops-tree');
+  dataUl.innerHTML = '';
+  if (ontology.dataProperties.length === 0) {
+    dataUl.innerHTML = '<li><span class="empty-state">Нет свойств.</span></li>';
+  } else {
+    ontology.dataProperties.filter(function(p) { return !p.parent; }).forEach(function(p) {
+      dataUl.appendChild(buildPropNode(p, 'dataprop', ontology.dataProperties));
+    });
+  }
+}
+
+// Построить узел дерева для одного свойства
+function buildPropNode(prop, kind, allProps) {
+  var li = document.createElement('li');
+  li.className = 'tree-item';
+
+  var children = allProps.filter(function(p) { return p.parent === prop.id; });
+  var icon = kind === 'objprop' ? '🔗' : '📝';
+
+  var row = document.createElement('div');
+  row.className = 'tree-row' + (selectedItem && selectedItem.id === prop.id ? ' selected' : '');
+
+  row.innerHTML = '<span class="tree-toggle">' + (children.length > 0 ? '▶' : '&nbsp;') + '</span>' +
+                  '<span class="tree-icon">' + icon + '</span>' +
+                  '<span class="tree-label">' + escapeHtml(prop.name) + '</span>';
+
+  row.addEventListener('click', function() {
+    selectItem(kind, prop.id);
+  });
+
+  li.appendChild(row);
+
+  if (children.length > 0) {
+    var childUl = document.createElement('ul');
+    childUl.className = 'tree-children collapsed';
+    children.forEach(function(child) {
+      childUl.appendChild(buildPropNode(child, kind, allProps));
+    });
+    li.appendChild(childUl);
+
+    row.querySelector('.tree-toggle').addEventListener('click', function(e) {
+      e.stopPropagation();
+      toggleTreeNode(this, childUl);
+    });
+  }
+
+  return li;
+}
+
+// Построить список индивидов
+function buildIndivList() {
+  var ul = document.getElementById('indivs-list');
+  ul.innerHTML = '';
+
+  if (ontology.individuals.length === 0) {
+    ul.innerHTML = '<li><span class="empty-state">Нет индивидов. Нажмите «+ Индивид».</span></li>';
+    return;
+  }
+
+  // Сгруппировать индивиды по классу
+  var byClass = {};
+  ontology.individuals.forEach(function(ind) {
+    var key = ind.type || '__noclass__';
+    if (!byClass[key]) byClass[key] = [];
+    byClass[key].push(ind);
+  });
+
+  Object.keys(byClass).forEach(function(classId) {
+    // Заголовок группы — имя класса
+    var groupLi = document.createElement('li');
+    var cls = classId === '__noclass__' ? null : getClass(classId);
+    var groupName = cls ? cls.name : '(без класса)';
+
+    var groupRow = document.createElement('div');
+    groupRow.style.cssText = 'font-size:11px;color:#888;padding:3px 4px 1px;margin-top:4px;border-bottom:1px solid #eee;';
+    groupRow.textContent = '▸ ' + groupName;
+    groupLi.appendChild(groupRow);
+    ul.appendChild(groupLi);
+
+    // Индивиды этой группы
+    byClass[classId].forEach(function(ind) {
+      var li = document.createElement('li');
+      li.className = 'tree-item';
+
+      var row = document.createElement('div');
+      row.className = 'tree-row' + (selectedItem && selectedItem.id === ind.id ? ' selected' : '');
+      row.innerHTML = '<span class="tree-toggle">&nbsp;</span><span class="tree-icon">👤</span><span class="tree-label">' + escapeHtml(ind.name) + '</span>';
+
+      row.addEventListener('click', function() {
+        selectItem('individual', ind.id);
+      });
+
+      li.appendChild(row);
+      ul.appendChild(li);
+    });
+  });
+}
+
+// Переключить узел дерева (раскрыть/свернуть)
+function toggleTreeNode(toggleEl, childUl) {
+  if (childUl.classList.contains('collapsed')) {
+    childUl.classList.remove('collapsed');
+    toggleEl.textContent = '▼';
+  } else {
+    childUl.classList.add('collapsed');
+    toggleEl.textContent = '▶';
+  }
+}
+
+// Развернуть все узлы дерева
+function expandAll(treeId) {
+  var tree = document.getElementById(treeId);
+  tree.querySelectorAll('.tree-children').forEach(function(ul) {
+    ul.classList.remove('collapsed');
+  });
+  tree.querySelectorAll('.tree-toggle').forEach(function(span) {
+    if (span.textContent.trim() === '▶') span.textContent = '▼';
+  });
+}
+
+// Свернуть все узлы дерева
+function collapseAll(treeId) {
+  var tree = document.getElementById(treeId);
+  tree.querySelectorAll('.tree-children').forEach(function(ul) {
+    ul.classList.add('collapsed');
+  });
+  tree.querySelectorAll('.tree-toggle').forEach(function(span) {
+    if (span.textContent.trim() === '▼') span.textContent = '▶';
+  });
+}
+
+// ============================================================
+// ВЫБОР ЭЛЕМЕНТА В НАВИГАТОРЕ
+// ============================================================
+function selectItem(kind, id) {
+  selectedItem = { kind: kind, id: id };
+
+  // Обновить заголовок
+  var item = getItem(selectedItem);
+  if (item) {
+    document.getElementById('detail-title').textContent = item.name;
+  }
+
+  // Обновить панели деталей
+  rebuildDescPanel();
+  rebuildUsagePanel();
+  rebuildAnnotPanel();
+
+  // Обновить выделение в деревьях
+  rebuildTrees();
+
+  logEvent('Выбран элемент: ' + (item ? item.name : id) + ' (' + kind + ')');
+}
+
+// ============================================================
+// ПАНЕЛЬ ОПИСАНИЯ (ВКЛАДКА "ОПИСАНИЕ")
+// ============================================================
+function rebuildDescPanel() {
+  var panel = document.getElementById('desc-panel-content');
+  panel.innerHTML = '';
+
+  if (!selectedItem) {
+    panel.innerHTML = '<p class="empty-state">Выберите элемент в навигаторе.</p>';
+    return;
+  }
+
+  var item = getItem(selectedItem);
+  if (!item) return;
+
+  // Вывести разное содержимое в зависимости от типа элемента
+  if (selectedItem.kind === 'class') {
+    renderClassDesc(panel, item);
+  } else if (selectedItem.kind === 'objprop') {
+    renderObjPropDesc(panel, item);
+  } else if (selectedItem.kind === 'dataprop') {
+    renderDataPropDesc(panel, item);
+  } else if (selectedItem.kind === 'individual') {
+    renderIndividualDesc(panel, item);
+  }
+}
+
+// Описание класса
+function renderClassDesc(panel, cls) {
+  // Родительский класс (SubClassOf)
+  var parentName = cls.parent ? (getClass(cls.parent) ? getClass(cls.parent).name : '?') : 'owl:Thing';
+
+  panel.innerHTML +=
+    '<div style="margin-bottom:10px;">' +
+    '<div style="font-size:11px;font-weight:bold;color:#555;margin-bottom:4px;">SubClassOf (родительский класс):</div>' +
+    '<div style="font-size:12px;color:#2980b9;">' + escapeHtml(parentName) + '</div>' +
+    '</div>';
+
+  // Эквивалентные классы
+  panel.innerHTML +=
+    '<div style="margin-bottom:10px;">' +
+    '<div style="font-size:11px;font-weight:bold;color:#555;margin-bottom:4px;">EquivalentTo:</div>' +
+    '<div class="tag-list" id="equiv-tags">' + renderEquivTags(cls) + '</div>' +
+    '<button class="btn-small" style="margin-top:4px;" onclick="addEquivalentClass(\'' + cls.id + '\')">+ Добавить</button>' +
+    '</div>';
+
+  // Несовместимые классы (DisjointWith)
+  panel.innerHTML +=
+    '<div style="margin-bottom:10px;">' +
+    '<div style="font-size:11px;font-weight:bold;color:#555;margin-bottom:4px;">DisjointWith (несовместимые):</div>' +
+    '<div class="tag-list" id="disjoint-tags">' + renderDisjointTags(cls) + '</div>' +
+    '<button class="btn-small" style="margin-top:4px;" onclick="addDisjointClass(\'' + cls.id + '\')">+ Добавить</button>' +
+    '</div>';
+
+  // Дочерние классы
+  var subClasses = ontology.classes.filter(function(c) { return c.parent === cls.id; });
+  if (subClasses.length > 0) {
+    var subHtml = subClasses.map(function(c) {
+      return '<span class="tag" onclick="selectItem(\'class\',\'' + c.id + '\')">' + escapeHtml(c.name) + '</span>';
+    }).join('');
+    panel.innerHTML +=
+      '<div style="margin-bottom:10px;">' +
+      '<div style="font-size:11px;font-weight:bold;color:#555;margin-bottom:4px;">Подклассы:</div>' +
+      '<div class="tag-list">' + subHtml + '</div>' +
+      '</div>';
+  }
+
+  // Индивиды этого класса
+  var indivs = ontology.individuals.filter(function(i) { return i.type === cls.id; });
+  if (indivs.length > 0) {
+    var indivHtml = indivs.map(function(ind) {
+      return '<span class="tag" onclick="selectItem(\'individual\',\'' + ind.id + '\')">' + escapeHtml(ind.name) + '</span>';
+    }).join('');
+    panel.innerHTML +=
+      '<div style="margin-bottom:10px;">' +
+      '<div style="font-size:11px;font-weight:bold;color:#555;margin-bottom:4px;">Индивиды этого класса:</div>' +
+      '<div class="tag-list">' + indivHtml + '</div>' +
+      '</div>';
+  }
+}
+
+// Получить HTML теги эквивалентных классов
+function renderEquivTags(cls) {
+  if (!cls.equivalentTo || cls.equivalentTo.length === 0) {
+    return '<span class="empty-state">—</span>';
+  }
+  return cls.equivalentTo.map(function(eqId) {
+    var eqCls = getClass(eqId);
+    if (!eqCls) return '';
+    return '<span class="tag">' + escapeHtml(eqCls.name) +
+           '<span class="tag-remove" onclick="removeEquiv(\'' + cls.id + '\',\'' + eqId + '\')">×</span></span>';
+  }).join('');
+}
+
+// Получить HTML теги несовместимых классов
+function renderDisjointTags(cls) {
+  if (!cls.disjointWith || cls.disjointWith.length === 0) {
+    return '<span class="empty-state">—</span>';
+  }
+  return cls.disjointWith.map(function(dId) {
+    var dCls = getClass(dId);
+    if (!dCls) return '';
+    return '<span class="tag">' + escapeHtml(dCls.name) +
+           '<span class="tag-remove" onclick="removeDisjoint(\'' + cls.id + '\',\'' + dId + '\')">×</span></span>';
+  }).join('');
+}
+
+// Описание объектного свойства
+function renderObjPropDesc(panel, prop) {
+  var domainName = prop.domain ? (getClass(prop.domain) ? getClass(prop.domain).name : '?') : '—';
+  var rangeName  = prop.range  ? (getClass(prop.range)  ? getClass(prop.range).name  : '?') : '—';
+
+  panel.innerHTML =
+    '<div style="margin-bottom:10px;">' +
+    '<div style="font-size:11px;font-weight:bold;color:#555;">Domain (область определения):</div>' +
+    '<select onchange="setPropDomain(\'' + prop.id + '\',\'objprop\',this.value)" style="width:100%;margin-top:4px;">' +
+    buildClassOptions(prop.domain) + '</select></div>' +
+
+    '<div style="margin-bottom:10px;">' +
+    '<div style="font-size:11px;font-weight:bold;color:#555;">Range (область значений — класс):</div>' +
+    '<select onchange="setPropRange(\'' + prop.id + '\',\'objprop\',this.value)" style="width:100%;margin-top:4px;">' +
+    buildClassOptions(prop.range) + '</select></div>' +
+
+    '<div style="margin-bottom:10px;">' +
+    '<div style="font-size:11px;font-weight:bold;color:#555;">Характеристики:</div>' +
+    buildCharacteristics(prop) + '</div>';
+}
+
+// Описание свойства данных
+function renderDataPropDesc(panel, prop) {
+  var xsdTypes = ['xsd:string','xsd:integer','xsd:decimal','xsd:boolean','xsd:date','xsd:dateTime','xsd:float'];
+
+  panel.innerHTML =
+    '<div style="margin-bottom:10px;">' +
+    '<div style="font-size:11px;font-weight:bold;color:#555;">Domain (область определения — класс):</div>' +
+    '<select onchange="setPropDomain(\'' + prop.id + '\',\'dataprop\',this.value)" style="width:100%;margin-top:4px;">' +
+    buildClassOptions(prop.domain) + '</select></div>' +
+
+    '<div style="margin-bottom:10px;">' +
+    '<div style="font-size:11px;font-weight:bold;color:#555;">Range (тип данных XSD):</div>' +
+    '<select onchange="setDataPropRange(\'' + prop.id + '\',this.value)" style="width:100%;margin-top:4px;">' +
+    xsdTypes.map(function(t) {
+      return '<option value="' + t + '"' + (prop.range === t ? ' selected' : '') + '>' + t + '</option>';
+    }).join('') + '</select></div>';
+}
+
+// Описание индивида
+function renderIndividualDesc(panel, ind) {
+  var clsName = ind.type ? (getClass(ind.type) ? getClass(ind.type).name : '?') : '—';
+
+  panel.innerHTML =
+    '<div style="margin-bottom:10px;">' +
+    '<div style="font-size:11px;font-weight:bold;color:#555;">Type (класс):</div>' +
+    '<select onchange="setIndividualType(\'' + ind.id + '\',this.value)" style="width:100%;margin-top:4px;">' +
+    buildClassOptionsWithEmpty(ind.type) + '</select></div>' +
+
+    '<div style="margin-bottom:10px;">' +
+    '<div style="font-size:11px;font-weight:bold;color:#555;">Объектные утверждения (Object property assertions):</div>' +
+    renderObjAssertions(ind) +
+    '<button class="btn-small" style="margin-top:4px;" onclick="addObjAssertion(\'' + ind.id + '\')">+ Добавить</button>' +
+    '</div>' +
+
+    '<div style="margin-bottom:10px;">' +
+    '<div style="font-size:11px;font-weight:bold;color:#555;">Утверждения данных (Data property assertions):</div>' +
+    renderDataAssertions(ind) +
+    '<button class="btn-small" style="margin-top:4px;" onclick="addDataAssertion(\'' + ind.id + '\')">+ Добавить</button>' +
+    '</div>';
+}
+
+// Получить HTML утверждений объектных свойств для индивида
+function renderObjAssertions(ind) {
+  if (!ind.assertions || ind.assertions.length === 0) return '<div class="empty-state">—</div>';
+  var objAsserts = ind.assertions.filter(function(a) { return a.type === 'object'; });
+  if (objAsserts.length === 0) return '<div class="empty-state">—</div>';
+
+  return '<div class="tag-list">' + objAsserts.map(function(a) {
+    var prop = getObjProp(a.property);
+    var target = getIndividual(a.target);
+    if (!prop || !target) return '';
+    return '<span class="tag">' + escapeHtml(prop.name) + ' → ' + escapeHtml(target.name) +
+           '<span class="tag-remove" onclick="removeAssertion(\'' + ind.id + '\',\'' + a.id + '\')">×</span></span>';
+  }).join('') + '</div>';
+}
+
+// Получить HTML утверждений свойств данных для индивида
+function renderDataAssertions(ind) {
+  if (!ind.assertions || ind.assertions.length === 0) return '<div class="empty-state">—</div>';
+  var dataAsserts = ind.assertions.filter(function(a) { return a.type === 'data'; });
+  if (dataAsserts.length === 0) return '<div class="empty-state">—</div>';
+
+  return '<div class="tag-list">' + dataAsserts.map(function(a) {
+    var prop = getDataProp(a.property);
+    if (!prop) return '';
+    return '<span class="tag">' + escapeHtml(prop.name) + ' = ' + escapeHtml(a.value) +
+           '<span class="tag-remove" onclick="removeAssertion(\'' + ind.id + '\',\'' + a.id + '\')">×</span></span>';
+  }).join('') + '</div>';
+}
+
+// Построить HTML опций выпадающего списка классов (без пустого)
+function buildClassOptions(selectedId) {
+  return '<option value="">— не задан —</option>' +
+    ontology.classes.map(function(c) {
+      return '<option value="' + c.id + '"' + (selectedId === c.id ? ' selected' : '') + '>' + escapeHtml(c.name) + '</option>';
+    }).join('');
+}
+
+// Построить HTML опций выпадающего списка классов (с пустым)
+function buildClassOptionsWithEmpty(selectedId) {
+  return '<option value="">— без типа —</option>' +
+    ontology.classes.map(function(c) {
+      return '<option value="' + c.id + '"' + (selectedId === c.id ? ' selected' : '') + '>' + escapeHtml(c.name) + '</option>';
+    }).join('');
+}
+
+// Построить HTML характеристик объектного свойства
+function buildCharacteristics(prop) {
+  var chars = ['functional','inverseFunctional','transitive','symmetric','asymmetric','reflexive','irreflexive'];
+  return chars.map(function(ch) {
+    var checked = prop[ch] ? ' checked' : '';
+    return '<label style="display:block;font-size:11px;"><input type="checkbox"' + checked +
+           ' onchange="setPropCharacteristic(\'' + prop.id + '\',\'' + ch + '\',this.checked)"> ' + ch + '</label>';
+  }).join('');
+}
+
+// ============================================================
+// ПАНЕЛЬ ИСПОЛЬЗОВАНИЯ
+// ============================================================
+function rebuildUsagePanel() {
+  var panel = document.getElementById('usage-panel-content');
+  panel.innerHTML = '';
+
+  if (!selectedItem) {
+    panel.innerHTML = '<p class="empty-state">Выберите элемент.</p>';
+    return;
+  }
+
+  var item = getItem(selectedItem);
+  if (!item) return;
+
+  var usages = [];
+
+  // Найти использование класса в свойствах (domain/range)
+  if (selectedItem.kind === 'class') {
+    ontology.objectProperties.forEach(function(p) {
+      if (p.domain === selectedItem.id) usages.push('Объект.свойство «' + p.name + '» — domain');
+      if (p.range  === selectedItem.id) usages.push('Объект.свойство «' + p.name + '» — range');
+    });
+    ontology.dataProperties.forEach(function(p) {
+      if (p.domain === selectedItem.id) usages.push('Свойство данных «' + p.name + '» — domain');
+    });
+    ontology.individuals.forEach(function(ind) {
+      if (ind.type === selectedItem.id) usages.push('Индивид «' + ind.name + '» — type');
+    });
+    ontology.classes.forEach(function(c) {
+      if (c.parent === selectedItem.id) usages.push('Класс «' + c.name + '» — подкласс');
+    });
+  }
+
+  // Найти использование свойства в утверждениях
+  if (selectedItem.kind === 'objprop' || selectedItem.kind === 'dataprop') {
+    ontology.individuals.forEach(function(ind) {
+      (ind.assertions || []).forEach(function(a) {
+        if (a.property === selectedItem.id) usages.push('Индивид «' + ind.name + '» — утверждение');
+      });
+    });
+  }
+
+  if (usages.length === 0) {
+    panel.innerHTML = '<p class="empty-state">Элемент не используется.</p>';
+  } else {
+    panel.innerHTML = usages.map(function(u) {
+      return '<div style="padding:3px 0; font-size:12px; border-bottom:1px solid #eee;">• ' + escapeHtml(u) + '</div>';
+    }).join('');
+  }
+}
+
+// ============================================================
+// ПАНЕЛЬ АННОТАЦИЙ
+// ============================================================
+function rebuildAnnotPanel() {
+  var empty = document.getElementById('annot-empty');
+
+  if (!selectedItem) {
+    empty.style.display = 'block';
+    document.getElementById('annot-label').value = '';
+    document.getElementById('annot-comment').value = '';
+    return;
+  }
+
+  var item = getItem(selectedItem);
+  if (!item) return;
+
+  empty.style.display = 'none';
+  document.getElementById('annot-label').value = (item.annotations && item.annotations.label) || '';
+  document.getElementById('annot-comment').value = (item.annotations && item.annotations.comment) || '';
+}
+
+// Сохранить значение аннотации
+function saveAnnotation(key) {
+  if (!selectedItem) return;
+  var item = getItem(selectedItem);
+  if (!item) return;
+  if (!item.annotations) item.annotations = {};
+  item.annotations[key] = document.getElementById('annot-' + key).value;
+  logEvent('Аннотация "' + key + '" для «' + item.name + '» сохранена.');
+}
+
+// ============================================================
+// ОПЕРАЦИИ НАД КЛАССАМИ
+// ============================================================
+
+// Показать диалог добавления класса
+function addClassDialog() {
+  // Заполнить список родительских классов
+  var select = document.getElementById('new-class-parent');
+  select.innerHTML = '<option value="">— нет (корневой класс) —</option>';
+  ontology.classes.forEach(function(c) {
+    var opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.name;
+    select.appendChild(opt);
+  });
+
+  document.getElementById('new-class-name').value = '';
+  openDialog('dialog-class');
+  setTimeout(function() { document.getElementById('new-class-name').focus(); }, 100);
+}
+
+// Подтвердить добавление класса
+function confirmAddClass() {
+  var name = document.getElementById('new-class-name').value.trim();
+  if (!name) { alert('Введите имя класса'); return; }
+
+  // Проверить уникальность имени
+  if (ontology.classes.some(function(c) { return c.name === name; })) {
+    alert('Класс с таким именем уже существует');
+    return;
+  }
+
+  var parent = document.getElementById('new-class-parent').value || null;
+  var cls = {
+    id: newId(),
+    name: name,
+    parent: parent,
+    equivalentTo: [],
+    disjointWith: [],
+    annotations: {}
+  };
+
+  ontology.classes.push(cls);
+  closeDialog('dialog-class');
+  rebuildTrees();
+  selectItem('class', cls.id);
+  logEvent('Добавлен класс: ' + name);
+  showNotification('Класс «' + name + '» добавлен');
+}
+
+// Добавить эквивалентный класс
+function addEquivalentClass(classId) {
+  var cls = getClass(classId);
+  if (!cls) return;
+
+  // Список доступных классов (исключить текущий и уже добавленные)
+  var available = ontology.classes.filter(function(c) {
+    return c.id !== classId && !(cls.equivalentTo || []).includes(c.id);
+  });
+  if (available.length === 0) { alert('Нет доступных классов'); return; }
+
+  showAssertDialog('Добавить эквивалентный класс',
+    '<label>Класс:</label><select id="assert-select">' +
+    available.map(function(c) { return '<option value="' + c.id + '">' + escapeHtml(c.name) + '</option>'; }).join('') +
+    '</select>',
+    function() {
+      var val = document.getElementById('assert-select').value;
+      if (!cls.equivalentTo) cls.equivalentTo = [];
+      cls.equivalentTo.push(val);
+      closeDialog('dialog-assert');
+      rebuildDescPanel();
+      logEvent('Добавлен EquivalentTo для ' + cls.name);
+    }
+  );
+}
+
+// Удалить эквивалентный класс
+function removeEquiv(classId, eqId) {
+  var cls = getClass(classId);
+  if (!cls) return;
+  cls.equivalentTo = (cls.equivalentTo || []).filter(function(id) { return id !== eqId; });
+  rebuildDescPanel();
+  logEvent('Удалён EquivalentTo');
+}
+
+// Добавить несовместимый класс
+function addDisjointClass(classId) {
+  var cls = getClass(classId);
+  if (!cls) return;
+
+  var available = ontology.classes.filter(function(c) {
+    return c.id !== classId && !(cls.disjointWith || []).includes(c.id);
+  });
+  if (available.length === 0) { alert('Нет доступных классов'); return; }
+
+  showAssertDialog('Добавить DisjointWith',
+    '<label>Класс:</label><select id="assert-select">' +
+    available.map(function(c) { return '<option value="' + c.id + '">' + escapeHtml(c.name) + '</option>'; }).join('') +
+    '</select>',
+    function() {
+      var val = document.getElementById('assert-select').value;
+      if (!cls.disjointWith) cls.disjointWith = [];
+      cls.disjointWith.push(val);
+      closeDialog('dialog-assert');
+      rebuildDescPanel();
+      logEvent('Добавлен DisjointWith для ' + cls.name);
+    }
+  );
+}
+
+// Удалить несовместимый класс
+function removeDisjoint(classId, dId) {
+  var cls = getClass(classId);
+  if (!cls) return;
+  cls.disjointWith = (cls.disjointWith || []).filter(function(id) { return id !== dId; });
+  rebuildDescPanel();
+  logEvent('Удалён DisjointWith');
+}
+
+// ============================================================
+// ОПЕРАЦИИ НАД СВОЙСТВАМИ
+// ============================================================
+
+// Показать диалог добавления свойства
+function addPropDialog(type) {
+  currentPropType = type;
+  document.getElementById('dialog-prop-title').textContent =
+    type === 'object' ? 'Добавить объектное свойство' : 'Добавить свойство данных';
+
+  var allProps = type === 'object' ? ontology.objectProperties : ontology.dataProperties;
+  var select = document.getElementById('new-prop-parent');
+  select.innerHTML = '<option value="">— нет (корневое свойство) —</option>';
+  allProps.forEach(function(p) {
+    var opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = p.name;
+    select.appendChild(opt);
+  });
+
+  document.getElementById('new-prop-name').value = '';
+  openDialog('dialog-prop');
+  setTimeout(function() { document.getElementById('new-prop-name').focus(); }, 100);
+}
+
+// Подтвердить добавление свойства
+function confirmAddProp() {
+  var name = document.getElementById('new-prop-name').value.trim();
+  if (!name) { alert('Введите имя свойства'); return; }
+
+  var allProps = currentPropType === 'object' ? ontology.objectProperties : ontology.dataProperties;
+  if (allProps.some(function(p) { return p.name === name; })) {
+    alert('Свойство с таким именем уже существует');
+    return;
+  }
+
+  var parent = document.getElementById('new-prop-parent').value || null;
+  var prop = {
+    id: newId(),
+    name: name,
+    parent: parent,
+    domain: null,
+    range: null,
+    annotations: {}
+  };
+
+  allProps.push(prop);
+  closeDialog('dialog-prop');
+  rebuildTrees();
+  selectItem(currentPropType === 'object' ? 'objprop' : 'dataprop', prop.id);
+  logEvent('Добавлено свойство: ' + name + ' (' + currentPropType + ')');
+  showNotification('Свойство «' + name + '» добавлено');
+}
+
+// Установить domain свойства
+function setPropDomain(propId, kind, classId) {
+  var prop = kind === 'objprop' ? getObjProp(propId) : getDataProp(propId);
+  if (!prop) return;
+  prop.domain = classId || null;
+  logEvent('Domain для «' + prop.name + '» установлен: ' + (classId || '—'));
+  renderGraph();
+}
+
+// Установить range объектного свойства
+function setPropRange(propId, kind, classId) {
+  var prop = getObjProp(propId);
+  if (!prop) return;
+  prop.range = classId || null;
+  logEvent('Range для «' + prop.name + '» установлен: ' + (classId || '—'));
+  renderGraph();
+}
+
+// Установить range свойства данных
+function setDataPropRange(propId, xsdType) {
+  var prop = getDataProp(propId);
+  if (!prop) return;
+  prop.range = xsdType;
+  logEvent('Range (XSD тип) для «' + prop.name + '» установлен: ' + xsdType);
+}
+
+// Установить характеристику объектного свойства
+function setPropCharacteristic(propId, charName, value) {
+  var prop = getObjProp(propId);
+  if (!prop) return;
+  prop[charName] = value;
+  logEvent('Характеристика «' + charName + '» для «' + prop.name + '» = ' + value);
+}
+
+// ============================================================
+// ОПЕРАЦИИ НАД ИНДИВИДАМИ
+// ============================================================
+
+// Показать диалог добавления индивида
+function addIndividualDialog() {
+  var select = document.getElementById('new-indiv-class');
+  select.innerHTML = '<option value="">— не указан —</option>';
+  ontology.classes.forEach(function(c) {
+    var opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = c.name;
+    select.appendChild(opt);
+  });
+
+  document.getElementById('new-indiv-name').value = '';
+  openDialog('dialog-indiv');
+  setTimeout(function() { document.getElementById('new-indiv-name').focus(); }, 100);
+}
+
+// Подтвердить добавление индивида
+function confirmAddIndividual() {
+  var name = document.getElementById('new-indiv-name').value.trim();
+  if (!name) { alert('Введите имя индивида'); return; }
+
+  if (ontology.individuals.some(function(i) { return i.name === name; })) {
+    alert('Индивид с таким именем уже существует');
+    return;
+  }
+
+  var type = document.getElementById('new-indiv-class').value || null;
+  var ind = {
+    id: newId(),
+    name: name,
+    type: type,
+    annotations: {},
+    assertions: []
+  };
+
+  ontology.individuals.push(ind);
+  closeDialog('dialog-indiv');
+  switchNavTab('indivs');
+  rebuildTrees();
+  selectItem('individual', ind.id);
+  logEvent('Добавлен индивид: ' + name);
+  showNotification('Индивид «' + name + '» добавлен');
+}
+
+// Установить тип (класс) индивида
+function setIndividualType(indId, classId) {
+  var ind = getIndividual(indId);
+  if (!ind) return;
+  ind.type = classId || null;
+  rebuildTrees();
+  logEvent('Тип индивида «' + ind.name + '» установлен: ' + (classId || '—'));
+  renderGraph();
+}
+
+// Добавить утверждение объектного свойства для индивида
+function addObjAssertion(indId) {
+  var ind = getIndividual(indId);
+  if (!ind) return;
+
+  if (ontology.objectProperties.length === 0) { alert('Нет объектных свойств'); return; }
+  if (ontology.individuals.length < 2) { alert('Нужно минимум 2 индивида'); return; }
+
+  var propOptions = ontology.objectProperties.map(function(p) {
+    return '<option value="' + p.id + '">' + escapeHtml(p.name) + '</option>';
+  }).join('');
+
+  var targetOptions = ontology.individuals.filter(function(i) { return i.id !== indId; }).map(function(i) {
+    return '<option value="' + i.id + '">' + escapeHtml(i.name) + '</option>';
+  }).join('');
+
+  showAssertDialog('Добавить утверждение объектного свойства',
+    '<label>Свойство:</label><select id="assert-prop">' + propOptions + '</select>' +
+    '<label style="margin-top:8px;display:block;">Цель (индивид):</label><select id="assert-target">' + targetOptions + '</select>',
+    function() {
+      var propId = document.getElementById('assert-prop').value;
+      var targetId = document.getElementById('assert-target').value;
+      if (!ind.assertions) ind.assertions = [];
+      ind.assertions.push({ id: newId(), type: 'object', property: propId, target: targetId });
+      closeDialog('dialog-assert');
+      rebuildDescPanel();
+      renderGraph();
+      logEvent('Добавлено утверждение объект.свойства для «' + ind.name + '»');
+    }
+  );
+}
+
+// Добавить утверждение свойства данных для индивида
+function addDataAssertion(indId) {
+  var ind = getIndividual(indId);
+  if (!ind) return;
+
+  if (ontology.dataProperties.length === 0) { alert('Нет свойств данных'); return; }
+
+  var propOptions = ontology.dataProperties.map(function(p) {
+    return '<option value="' + p.id + '">' + escapeHtml(p.name) + '</option>';
+  }).join('');
+
+  showAssertDialog('Добавить утверждение свойства данных',
+    '<label>Свойство:</label><select id="assert-prop">' + propOptions + '</select>' +
+    '<label style="margin-top:8px;display:block;">Значение:</label><input type="text" id="assert-value" placeholder="Значение">',
+    function() {
+      var propId = document.getElementById('assert-prop').value;
+      var value = document.getElementById('assert-value').value.trim();
+      if (!value) { alert('Введите значение'); return; }
+      if (!ind.assertions) ind.assertions = [];
+      ind.assertions.push({ id: newId(), type: 'data', property: propId, value: value });
+      closeDialog('dialog-assert');
+      rebuildDescPanel();
+      logEvent('Добавлено утверждение данных для «' + ind.name + '»');
+    }
+  );
+}
+
+// Удалить утверждение
+function removeAssertion(indId, assertId) {
+  var ind = getIndividual(indId);
+  if (!ind) return;
+  ind.assertions = (ind.assertions || []).filter(function(a) { return a.id !== assertId; });
+  rebuildDescPanel();
+  renderGraph();
+  logEvent('Утверждение удалено');
+}
+
+// ============================================================
+// ПЕРЕИМЕНОВАНИЕ И УДАЛЕНИЕ
+// ============================================================
+
+// Показать диалог переименования
+function renameSelected() {
+  if (!selectedItem) { alert('Выберите элемент'); return; }
+  var item = getItem(selectedItem);
+  if (!item) return;
+  document.getElementById('rename-input').value = item.name;
+  openDialog('dialog-rename');
+  setTimeout(function() { document.getElementById('rename-input').focus(); }, 100);
+}
+
+// Подтвердить переименование
+function confirmRename() {
+  var newName = document.getElementById('rename-input').value.trim();
+  if (!newName) { alert('Введите имя'); return; }
+
+  var item = getItem(selectedItem);
+  if (!item) return;
+
+  var oldName = item.name;
+  item.name = newName;
+  document.getElementById('detail-title').textContent = newName;
+  closeDialog('dialog-rename');
+  rebuildTrees();
+  logEvent('Переименован: ' + oldName + ' → ' + newName);
+  showNotification('Переименовано: ' + newName);
+}
+
+// Удалить выбранный элемент
+function deleteSelected() {
+  if (!selectedItem) { alert('Выберите элемент'); return; }
+  var item = getItem(selectedItem);
+  if (!item) return;
+  if (!confirm('Удалить «' + item.name + '»?')) return;
+
+  if (selectedItem.kind === 'class') {
+    // Удалить класс и всех его дочерних (обнулить parent)
+    ontology.classes = ontology.classes.filter(function(c) { return c.id !== selectedItem.id; });
+    ontology.classes.forEach(function(c) {
+      if (c.parent === selectedItem.id) c.parent = null;
+    });
+    // Очистить использование в свойствах и индивидах
+    ontology.objectProperties.forEach(function(p) {
+      if (p.domain === selectedItem.id) p.domain = null;
+      if (p.range  === selectedItem.id) p.range  = null;
+    });
+    ontology.dataProperties.forEach(function(p) {
+      if (p.domain === selectedItem.id) p.domain = null;
+    });
+    ontology.individuals.forEach(function(i) {
+      if (i.type === selectedItem.id) i.type = null;
+    });
+  } else if (selectedItem.kind === 'objprop') {
+    ontology.objectProperties = ontology.objectProperties.filter(function(p) { return p.id !== selectedItem.id; });
+  } else if (selectedItem.kind === 'dataprop') {
+    ontology.dataProperties = ontology.dataProperties.filter(function(p) { return p.id !== selectedItem.id; });
+  } else if (selectedItem.kind === 'individual') {
+    ontology.individuals = ontology.individuals.filter(function(i) { return i.id !== selectedItem.id; });
+  }
+
+  logEvent('Удалён: ' + item.name);
+  showNotification('Удалено: ' + item.name);
+  selectedItem = null;
+  document.getElementById('detail-title').textContent = 'Выберите элемент';
+  rebuildTrees();
+  rebuildDescPanel();
+  renderGraph();
+}
+
+// ============================================================
+// ДИАЛОГОВЫЕ ОКНА
+// ============================================================
+
+function openDialog(id) {
+  document.getElementById(id).classList.add('open');
+}
+
+function closeDialog(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// Показать диалог добавления утверждения (универсальный)
+var assertCallback = null;
+function showAssertDialog(title, bodyHtml, callback) {
+  document.getElementById('dialog-assert-title').textContent = title;
+  document.getElementById('dialog-assert-body').innerHTML = bodyHtml;
+  assertCallback = callback;
+  document.getElementById('dialog-assert-ok').onclick = function() {
+    if (assertCallback) assertCallback();
+  };
+  openDialog('dialog-assert');
+}
+
+// Показать диалог примеров
+function showImportDialog() {
+  openDialog('dialog-examples');
+}
+
+// ============================================================
+// СТАТИСТИКА
+// ============================================================
+function updateStats() {
+  var stats = document.getElementById('stats');
+  stats.innerHTML =
+    'Классов: <strong>' + ontology.classes.length + '</strong><br>' +
+    'Объект. свойств: <strong>' + ontology.objectProperties.length + '</strong><br>' +
+    'Свойств данных: <strong>' + ontology.dataProperties.length + '</strong><br>' +
+    'Индивидов: <strong>' + ontology.individuals.length + '</strong>';
+}
+
+// ============================================================
+// ГЕНЕРАЦИЯ DOT-КОДА И ОТРИСОВКА ГРАФА
+// ============================================================
+
+// Сгенерировать DOT-код из текущей онтологии
+function generateDot() {
+  var showClasses  = document.getElementById('show-classes').checked;
+  var showObjProps = document.getElementById('show-objprops').checked;
+  var showDataProps= document.getElementById('show-dataprops').checked;
+  var showIndivs   = document.getElementById('show-indivs').checked;
+
+  var colorClass = document.getElementById('color-class').value;
+  var colorIndiv = document.getElementById('color-indiv').value;
+
+  // Преобразовать HEX-цвет в имя для Graphviz (использовать как есть — Graphviz понимает HEX)
+  var lines = [];
+  lines.push('digraph ontology {');
+  lines.push('  graph [rankdir=TB fontname="Arial" fontsize=12 splines=ortho nodesep=0.5 ranksep=0.8];');
+  lines.push('  node  [fontname="Arial" fontsize=11 style=filled];');
+  lines.push('  edge  [fontname="Arial" fontsize=9];');
+  lines.push('');
+
+  // ---- Узлы классов ----
+  if (showClasses) {
+    lines.push('  // Классы OWL');
+    ontology.classes.forEach(function(cls) {
+      var label = escapeLabel(cls.name);
+      if (cls.annotations && cls.annotations.label) {
+        label = escapeLabel(cls.annotations.label);
+      }
+      lines.push('  ' + dotId(cls.id) + ' [label="' + label + '" shape=box fillcolor="' + colorClass + '" color="#336699"];');
+    });
+    lines.push('');
+
+    // Ребра SubClassOf
+    lines.push('  // Связи SubClassOf (стрелка с незакрашенной головкой)');
+    ontology.classes.forEach(function(cls) {
+      if (cls.parent) {
+        lines.push('  ' + dotId(cls.id) + ' -> ' + dotId(cls.parent) + ' [arrowhead=empty label="subClassOf" style=dashed color="#336699"];');
+      }
+    });
+
+    // Ребра DisjointWith
+    ontology.classes.forEach(function(cls) {
+      (cls.disjointWith || []).forEach(function(dId) {
+        lines.push('  ' + dotId(cls.id) + ' -> ' + dotId(dId) + ' [arrowhead=odot label="disjointWith" style=dotted color="#e74c3c" dir=none];');
+      });
+    });
+
+    // Ребра EquivalentTo
+    ontology.classes.forEach(function(cls) {
+      (cls.equivalentTo || []).forEach(function(eqId) {
+        lines.push('  ' + dotId(cls.id) + ' -> ' + dotId(eqId) + ' [arrowhead=odot label="equivalentTo" style=dashed color="#2ecc71" dir=both];');
+      });
+    });
+    lines.push('');
+  }
+
+  // ---- Узлы и рёбра объектных свойств ----
+  if (showObjProps) {
+    lines.push('  // Объектные свойства (domain -> range через свойство)');
+    ontology.objectProperties.forEach(function(prop) {
+      if (prop.domain && prop.range) {
+        var label = escapeLabel(prop.name);
+        lines.push('  ' + dotId(prop.domain) + ' -> ' + dotId(prop.range) +
+                   ' [label="' + label + '" color="#8e44ad" fontcolor="#8e44ad" arrowhead=open penwidth=1.5];');
+      }
+    });
+    lines.push('');
+  }
+
+  // ---- Свойства данных (класс -> тип данных) ----
+  if (showDataProps) {
+    lines.push('  // Свойства данных');
+    var addedXsd = {};
+    ontology.dataProperties.forEach(function(prop) {
+      if (prop.domain) {
+        var rangeLabel = prop.range || 'xsd:?';
+        var xsdNodeId = 'xsd_' + (prop.range || 'unknown').replace(/[^a-z0-9]/gi, '_');
+        if (!addedXsd[xsdNodeId]) {
+          lines.push('  ' + xsdNodeId + ' [label="' + escapeLabel(rangeLabel) + '" shape=ellipse fillcolor="#fff2cc" color="#d6b656" fontsize=10];');
+          addedXsd[xsdNodeId] = true;
+        }
+        lines.push('  ' + dotId(prop.domain) + ' -> ' + xsdNodeId +
+                   ' [label="' + escapeLabel(prop.name) + '" color="#e67e22" fontcolor="#e67e22" arrowhead=open style=dashed penwidth=1.2];');
+      }
+    });
+    lines.push('');
+  }
+
+  // ---- Узлы индивидов ----
+  if (showIndivs) {
+    lines.push('  // Индивиды (экземпляры классов)');
+    ontology.individuals.forEach(function(ind) {
+      var label = escapeLabel(ind.name);
+      lines.push('  ' + dotId(ind.id) + ' [label="' + label + '" shape=ellipse fillcolor="' + colorIndiv + '" color="#336633"];');
+
+      // Ребро instanceOf (type)
+      if (ind.type && showClasses) {
+        lines.push('  ' + dotId(ind.id) + ' -> ' + dotId(ind.type) +
+                   ' [label="instanceOf" arrowhead=empty style=dashed color="#336633" fontsize=8];');
+      }
+
+      // Рёбра объектных утверждений
+      if (showObjProps) {
+        (ind.assertions || []).filter(function(a) { return a.type === 'object'; }).forEach(function(a) {
+          var prop = getObjProp(a.property);
+          if (!prop) return;
+          lines.push('  ' + dotId(ind.id) + ' -> ' + dotId(a.target) +
+                     ' [label="' + escapeLabel(prop.name) + '" color="#8e44ad" fontcolor="#8e44ad" arrowhead=open penwidth=1.5];');
+        });
+      }
+    });
+  }
+
+  lines.push('}');
+  return lines.join('\n');
+}
+
+// Получить безопасный id для DOT (заменить специальные символы)
+function dotId(id) {
+  return '"' + id.replace(/"/g, '\\"') + '"';
+}
+
+// Экранировать текст метки DOT
+function escapeLabel(str) {
+  return String(str).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n');
+}
+
+// Отрисовать граф с помощью Graphviz
+function renderGraph() {
+  var dot = generateDot();
+
+  // Показать DOT-код в textarea
+  document.getElementById('dotOutput').value = dot;
+
+  // Если граф пустой (нет классов, свойств и индивидов), показать подсказку
+  if (ontology.classes.length === 0 && ontology.individuals.length === 0) {
+    document.getElementById('graphvizContainer').innerHTML =
+      '<p style="color:#aaa;font-style:italic;font-size:12px;padding:12px;">Добавьте классы или индивиды для отображения графа.</p>';
+    return;
+  }
+
+  var container = document.getElementById('graphvizContainer');
+  container.innerHTML = '<p style="color:#888;font-size:12px;padding:12px;">Рендеринг графа...</p>';
+
+  // Graphviz рендеринг асинхронный
+  Viz.instance().then(function(viz) {
+    try {
+      var svg = viz.renderSVGElement(dot);
+      container.innerHTML = '';
+      container.appendChild(svg);
+
+      // Добавить интерактивность к узлам графа
+      addGraphInteractivity(svg);
+
+      logEvent('Граф обновлён. Узлов: ' + (ontology.classes.length + ontology.individuals.length));
+    } catch (err) {
+      container.innerHTML = '<p style="color:red;padding:12px;">Ошибка Graphviz: ' + escapeHtml(err.message) + '</p>';
+      logEvent('Ошибка отрисовки графа: ' + err.message);
+    }
+  });
+}
+
+// Применить DOT-код из textarea (ручное редактирование)
+function renderFromDot() {
+  var dot = document.getElementById('dotOutput').value;
+  if (!dot.trim()) { alert('Введите DOT-код'); return; }
+
+  var container = document.getElementById('graphvizContainer');
+  container.innerHTML = '<p style="color:#888;font-size:12px;padding:12px;">Рендеринг...</p>';
+
+  Viz.instance().then(function(viz) {
+    try {
+      var svg = viz.renderSVGElement(dot);
+      container.innerHTML = '';
+      container.appendChild(svg);
+      addGraphInteractivity(svg);
+      logEvent('Граф обновлён из DOT-кода.');
+    } catch (err) {
+      container.innerHTML = '<p style="color:red;padding:12px;">Ошибка DOT: ' + escapeHtml(err.message) + '</p>';
+    }
+  });
+}
+
+// Добавить интерактивность (выделение при клике) к узлам SVG-графа
+function addGraphInteractivity(svg) {
+  var nodes = svg.querySelectorAll('.node');
+  nodes.forEach(function(node) {
+    node.style.cursor = 'pointer';
+
+    node.addEventListener('click', function() {
+      // Снять выделение со всех узлов
+      svg.querySelectorAll('.node').forEach(function(n) { n.classList.remove('selected'); });
+
+      // Выделить нажатый узел
+      node.classList.add('selected');
+
+      // Найти id элемента по тексту метки узла
+      var titleEl = node.querySelector('title');
+      if (titleEl) {
+        var nodeId = titleEl.textContent.trim();
+        // Попробовать найти элемент по id
+        var found = null;
+        ontology.classes.forEach(function(c) { if (c.id === nodeId) found = {kind:'class', id:c.id}; });
+        ontology.individuals.forEach(function(i) { if (i.id === nodeId) found = {kind:'individual', id:i.id}; });
+
+        if (found) {
+          // Выбрать элемент в навигаторе без перестройки графа
+          selectedItem = found;
+          var item = getItem(found);
+          if (item) document.getElementById('detail-title').textContent = item.name;
+          rebuildDescPanel();
+          rebuildUsagePanel();
+          rebuildAnnotPanel();
+          rebuildTrees();
+          logEvent('Выбран на графе: ' + (item ? item.name : nodeId));
+        }
+      }
+    });
+  });
+}
+
+// Скопировать DOT-код в буфер обмена
+function copyDot() {
+  var dot = document.getElementById('dotOutput').value;
+  if (!dot) { alert('Нет DOT-кода'); return; }
+  navigator.clipboard.writeText(dot).then(function() {
+    showNotification('DOT-код скопирован');
+  }).catch(function() {
+    // Запасной вариант через execCommand
+    var ta = document.getElementById('dotOutput');
+    ta.select();
+    document.execCommand('copy');
+    showNotification('DOT-код скопирован');
+  });
+}
+
+// Открыть Graphviz Online с текущим DOT-кодом
+function openGraphvizOnline(e) {
+  e.preventDefault();
+  var dot = document.getElementById('dotOutput').value;
+  if (!dot) { renderGraph(); dot = document.getElementById('dotOutput').value; }
+  // Закодировать DOT в URL и открыть в Graphviz Online
+  var encoded = encodeURIComponent(dot);
+  window.open('https://bpmbpm.github.io/graphviz-online/ver1/index.html#' + encoded, '_blank');
+}
+
+// ============================================================
+// ИМПОРТ И ЭКСПОРТ
+// ============================================================
+
+// Открыть диалог выбора файла для импорта
+function importJSON() {
+  document.getElementById('fileInput').click();
+}
+
+// Обработать выбранный файл
+function handleFileImport(event) {
+  var file = event.target.files[0];
+  if (!file) return;
+
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var data = JSON.parse(e.target.result);
+      // Проверить формат данных
+      if (!data.classes && !data.objectProperties) {
+        alert('Неверный формат файла');
+        return;
+      }
+      loadOntologyData(data);
+      logEvent('Онтология загружена из файла: ' + file.name);
+      showNotification('Загружено: ' + file.name);
+    } catch (err) {
+      alert('Ошибка чтения файла: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+
+  // Сбросить значение input для повторного выбора того же файла
+  event.target.value = '';
+}
+
+// Загрузить данные онтологии в модель
+function loadOntologyData(data) {
+  ontology.iri = data.iri || ontology.iri;
+  ontology.classes = data.classes || [];
+  ontology.objectProperties = data.objectProperties || [];
+  ontology.dataProperties = data.dataProperties || [];
+  ontology.individuals = data.individuals || [];
+
+  // Обновить счётчик id (чтобы новые элементы не конфликтовали)
+  var maxId = 0;
+  var allItems = [].concat(ontology.classes, ontology.objectProperties, ontology.dataProperties, ontology.individuals);
+  allItems.forEach(function(item) {
+    var num = parseInt((item.id || '').replace('id_', ''), 10);
+    if (!isNaN(num) && num > maxId) maxId = num;
+  });
+  idCounter = maxId + 1;
+
+  document.getElementById('ontology-iri').value = ontology.iri;
+  selectedItem = null;
+  document.getElementById('detail-title').textContent = 'Выберите элемент';
+  rebuildTrees();
+  rebuildDescPanel();
+  renderGraph();
+}
+
+// Сохранить онтологию в JSON-файл
+function exportJSON() {
+  var data = JSON.stringify(ontology, null, 2);
+  var blob = new Blob([data], { type: 'application/json' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'ontology.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  logEvent('Онтология сохранена в JSON');
+  showNotification('Файл ontology.json сохранён');
+}
+
+// Экспорт в формат OWL (Manchester Syntax / Turtle-подобный)
+function exportOWL() {
+  var lines = [];
+  lines.push('Prefix: owl: <http://www.w3.org/2002/07/owl#>');
+  lines.push('Prefix: rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>');
+  lines.push('Prefix: rdfs: <http://www.w3.org/2000/01/rdf-schema#>');
+  lines.push('Prefix: xsd: <http://www.w3.org/2001/XMLSchema#>');
+  lines.push('Prefix: : <' + ontology.iri + '#>');
+  lines.push('');
+  lines.push('Ontology: <' + ontology.iri + '>');
+  lines.push('');
+
+  // Классы
+  ontology.classes.forEach(function(cls) {
+    lines.push('Class: :' + cls.name);
+    if (cls.annotations && cls.annotations.label)   lines.push('  Annotations: rdfs:label "' + cls.annotations.label + '"');
+    if (cls.annotations && cls.annotations.comment) lines.push('  Annotations: rdfs:comment "' + cls.annotations.comment + '"');
+    if (cls.parent) {
+      var p = getClass(cls.parent);
+      if (p) lines.push('  SubClassOf: :' + p.name);
+    }
+    if (cls.equivalentTo && cls.equivalentTo.length > 0) {
+      cls.equivalentTo.forEach(function(eqId) {
+        var eq = getClass(eqId);
+        if (eq) lines.push('  EquivalentTo: :' + eq.name);
+      });
+    }
+    if (cls.disjointWith && cls.disjointWith.length > 0) {
+      cls.disjointWith.forEach(function(dId) {
+        var d = getClass(dId);
+        if (d) lines.push('  DisjointWith: :' + d.name);
+      });
+    }
+    lines.push('');
+  });
+
+  // Объектные свойства
+  ontology.objectProperties.forEach(function(prop) {
+    lines.push('ObjectProperty: :' + prop.name);
+    if (prop.domain) { var d = getClass(prop.domain); if (d) lines.push('  Domain: :' + d.name); }
+    if (prop.range)  { var r = getClass(prop.range);  if (r) lines.push('  Range: :' + r.name); }
+    var chars = ['functional','inverseFunctional','transitive','symmetric','asymmetric','reflexive','irreflexive'];
+    chars.forEach(function(ch) { if (prop[ch]) lines.push('  Characteristics: ' + ch.charAt(0).toUpperCase() + ch.slice(1)); });
+    lines.push('');
+  });
+
+  // Свойства данных
+  ontology.dataProperties.forEach(function(prop) {
+    lines.push('DataProperty: :' + prop.name);
+    if (prop.domain) { var d = getClass(prop.domain); if (d) lines.push('  Domain: :' + d.name); }
+    if (prop.range)  lines.push('  Range: ' + prop.range);
+    lines.push('');
+  });
+
+  // Индивиды
+  ontology.individuals.forEach(function(ind) {
+    lines.push('Individual: :' + ind.name);
+    if (ind.type) { var cls = getClass(ind.type); if (cls) lines.push('  Types: :' + cls.name); }
+    if (ind.annotations && ind.annotations.label) lines.push('  Annotations: rdfs:label "' + ind.annotations.label + '"');
+    (ind.assertions || []).forEach(function(a) {
+      if (a.type === 'object') {
+        var prop = getObjProp(a.property);
+        var target = getIndividual(a.target);
+        if (prop && target) lines.push('  ObjectPropertyAssertion: :' + prop.name + ' :' + target.name);
+      } else if (a.type === 'data') {
+        var dprop = getDataProp(a.property);
+        if (dprop) lines.push('  DataPropertyAssertion: :' + dprop.name + ' "' + a.value + '"');
+      }
+    });
+    lines.push('');
+  });
+
+  var blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'ontology.omn';
+  a.click();
+  URL.revokeObjectURL(url);
+  logEvent('Онтология экспортирована в OWL (Manchester Syntax)');
+  showNotification('Файл ontology.omn сохранён');
+}
+
+// ============================================================
+// ПРИМЕРЫ ОНТОЛОГИЙ
+// ============================================================
+
+// Загрузить выбранный пример
+function loadExample() {
+  var example = document.getElementById('example-select').value;
+  closeDialog('dialog-examples');
+
+  if (example === 'animals') loadAnimalsExample();
+  else if (example === 'pizza') loadPizzaExample();
+  else if (example === 'family') loadFamilyExample();
+}
+
+// Пример онтологии Животных
+function loadAnimalsExample() {
+  loadOntologyData({
+    iri: "http://example.org/animals",
+    classes: [
+      { id:'c1', name:'Animal',     parent:null,  equivalentTo:[], disjointWith:[], annotations:{label:'Животное'} },
+      { id:'c2', name:'Mammal',     parent:'c1',  equivalentTo:[], disjointWith:['c3'], annotations:{label:'Млекопитающее'} },
+      { id:'c3', name:'Bird',       parent:'c1',  equivalentTo:[], disjointWith:['c2'], annotations:{label:'Птица'} },
+      { id:'c4', name:'Dog',        parent:'c2',  equivalentTo:[], disjointWith:[], annotations:{label:'Собака'} },
+      { id:'c5', name:'Cat',        parent:'c2',  equivalentTo:[], disjointWith:[], annotations:{label:'Кошка'} },
+      { id:'c6', name:'Parrot',     parent:'c3',  equivalentTo:[], disjointWith:[], annotations:{label:'Попугай'} },
+      { id:'c7', name:'Person',     parent:null,  equivalentTo:[], disjointWith:[], annotations:{label:'Человек'} },
+    ],
+    objectProperties: [
+      { id:'p1', name:'hasOwner', parent:null, domain:'c4', range:'c7', annotations:{label:'имеет хозяина'} },
+      { id:'p2', name:'hasPet',   parent:null, domain:'c7', range:'c1', annotations:{label:'имеет питомца'} },
+    ],
+    dataProperties: [
+      { id:'dp1', name:'hasName', parent:null, domain:'c1', range:'xsd:string', annotations:{} },
+      { id:'dp2', name:'hasAge',  parent:null, domain:'c1', range:'xsd:integer', annotations:{} },
+    ],
+    individuals: [
+      { id:'i1', name:'Fido',   type:'c4', annotations:{}, assertions:[
+        { id:'a1', type:'object', property:'p1', target:'i3' },
+        { id:'a2', type:'data',   property:'dp1', value:'Фидо' },
+      ]},
+      { id:'i2', name:'Whiskers', type:'c5', annotations:{}, assertions:[
+        { id:'a3', type:'data', property:'dp1', value:'Мурзик' },
+      ]},
+      { id:'i3', name:'Alice', type:'c7', annotations:{}, assertions:[
+        { id:'a4', type:'object', property:'p2', target:'i1' },
+      ]},
+      { id:'i4', name:'Polly', type:'c6', annotations:{}, assertions:[] },
+    ]
+  });
+  logEvent('Загружен пример: Животные');
+  showNotification('Пример «Животные» загружен');
+}
+
+// Пример онтологии Пиццы (упрощённая версия Pizza Ontology)
+function loadPizzaExample() {
+  loadOntologyData({
+    iri: "http://example.org/pizza",
+    classes: [
+      { id:'c1', name:'Food',            parent:null,  equivalentTo:[], disjointWith:[], annotations:{label:'Еда'} },
+      { id:'c2', name:'Pizza',           parent:'c1',  equivalentTo:[], disjointWith:['c3'], annotations:{label:'Пицца'} },
+      { id:'c3', name:'PizzaTopping',    parent:'c1',  equivalentTo:[], disjointWith:['c2'], annotations:{label:'Начинка'} },
+      { id:'c4', name:'PizzaBase',       parent:'c1',  equivalentTo:[], disjointWith:[], annotations:{label:'Основа'} },
+      { id:'c5', name:'MargheritaPizza', parent:'c2',  equivalentTo:[], disjointWith:[], annotations:{label:'Маргарита'} },
+      { id:'c6', name:'AmericanaPizza',  parent:'c2',  equivalentTo:[], disjointWith:[], annotations:{label:'Американа'} },
+      { id:'c7', name:'MozzarellaTopping',parent:'c3', equivalentTo:[], disjointWith:[], annotations:{label:'Моцарелла'} },
+      { id:'c8', name:'TomatoTopping',    parent:'c3', equivalentTo:[], disjointWith:[], annotations:{label:'Томат'} },
+      { id:'c9', name:'PepperoniTopping', parent:'c3', equivalentTo:[], disjointWith:[], annotations:{label:'Пепперони'} },
+    ],
+    objectProperties: [
+      { id:'p1', name:'hasTopping', parent:null, domain:'c2', range:'c3', annotations:{label:'имеет начинку'} },
+      { id:'p2', name:'hasBase',    parent:null, domain:'c2', range:'c4', annotations:{label:'имеет основу'} },
+    ],
+    dataProperties: [
+      { id:'dp1', name:'hasCalories', parent:null, domain:'c2', range:'xsd:integer', annotations:{} },
+    ],
+    individuals: [
+      { id:'i1', name:'MyMargherita', type:'c5', annotations:{}, assertions:[
+        { id:'a1', type:'data', property:'dp1', value:'800' }
+      ]},
+      { id:'i2', name:'MyAmericana', type:'c6', annotations:{}, assertions:[
+        { id:'a2', type:'data', property:'dp1', value:'1100' }
+      ]},
+    ]
+  });
+  logEvent('Загружен пример: Пицца');
+  showNotification('Пример «Пицца» загружен');
+}
+
+// Пример онтологии Семьи
+function loadFamilyExample() {
+  loadOntologyData({
+    iri: "http://example.org/family",
+    classes: [
+      { id:'c1', name:'Person',  parent:null,  equivalentTo:[], disjointWith:[], annotations:{label:'Человек'} },
+      { id:'c2', name:'Male',    parent:'c1',  equivalentTo:[], disjointWith:['c3'], annotations:{label:'Мужчина'} },
+      { id:'c3', name:'Female',  parent:'c1',  equivalentTo:[], disjointWith:['c2'], annotations:{label:'Женщина'} },
+      { id:'c4', name:'Parent',  parent:'c1',  equivalentTo:[], disjointWith:[], annotations:{label:'Родитель'} },
+      { id:'c5', name:'Father',  parent:'c4',  equivalentTo:[], disjointWith:[], annotations:{label:'Отец'} },
+      { id:'c6', name:'Mother',  parent:'c4',  equivalentTo:[], disjointWith:[], annotations:{label:'Мать'} },
+    ],
+    objectProperties: [
+      { id:'p1', name:'hasParent',  parent:null, domain:'c1', range:'c4', symmetric:false, transitive:false, annotations:{label:'имеет родителя'} },
+      { id:'p2', name:'hasChild',   parent:null, domain:'c4', range:'c1', annotations:{label:'имеет ребёнка'} },
+      { id:'p3', name:'isMarriedTo',parent:null, domain:'c1', range:'c1', symmetric:true, annotations:{label:'состоит в браке'} },
+    ],
+    dataProperties: [
+      { id:'dp1', name:'hasFirstName', parent:null, domain:'c1', range:'xsd:string', annotations:{} },
+      { id:'dp2', name:'hasBirthYear', parent:null, domain:'c1', range:'xsd:integer', annotations:{} },
+    ],
+    individuals: [
+      { id:'i1', name:'Ivan',   type:'c5', annotations:{}, assertions:[
+        { id:'a1', type:'object', property:'p2', target:'i3' },
+        { id:'a2', type:'object', property:'p3', target:'i2' },
+        { id:'a3', type:'data',   property:'dp1', value:'Иван' },
+      ]},
+      { id:'i2', name:'Maria',  type:'c6', annotations:{}, assertions:[
+        { id:'a4', type:'object', property:'p2', target:'i3' },
+        { id:'a5', type:'data',   property:'dp1', value:'Мария' },
+      ]},
+      { id:'i3', name:'Kolya',  type:'c2', annotations:{}, assertions:[
+        { id:'a6', type:'object', property:'p1', target:'i1' },
+        { id:'a7', type:'data',   property:'dp1', value:'Коля' },
+      ]},
+    ]
+  });
+  logEvent('Загружен пример: Семья');
+  showNotification('Пример «Семья» загружен');
+}
+
+// ============================================================
+// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+// ============================================================
+
+// Экранировать HTML-символы для безопасного вывода
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ============================================================
+// ИНИЦИАЛИЗАЦИЯ ПРИЛОЖЕНИЯ
+// ============================================================
+function init() {
+  rebuildTrees();
+  updateStats();
+  logEvent('Приложение запущено. Загрузите онтологию или выберите пример.');
+}
+
+// Запустить приложение после загрузки страницы
+document.addEventListener('DOMContentLoaded', init);
+</script>
+
+</body>
+</html>
